@@ -13,14 +13,6 @@ Accepted:
 Redundant with above list and excluded:
 5, 1
 5, 1, 1, 5
-
-(In other words, if we can rearrange the roll to be the same as a prior roll, then it's redundant)
-
-
-Throughout this program, 0 is treated as a die that cannot be rolled.
-
-This assumes that when there are multiple rolls with different scores (like 1,1,1,5 can be scored 
-as 1050 or as 350) the largest is taken
 """
 
 import math
@@ -140,7 +132,7 @@ def score_multiples(roll):
                               ut.difference(roll, remaining)])
             
     # create a DataFrame from the list
-    multiples = multiples.append(pd.DataFrame(multiples_list, columns=SCORE_COLUMNS))
+    multiples = pd.concat([multiples, pd.DataFrame(multiples_list, columns=SCORE_COLUMNS)])
     return multiples
 
 def score_dice(roll):
@@ -165,7 +157,7 @@ def score_dice(roll):
         scores_list.append([score, remaining, 
                             'individual', combo])
         
-    scores = scores.append(pd.DataFrame(scores_list, columns=SCORE_COLUMNS))
+    scores = pd.concat([scores, pd.DataFrame(scores_list, columns=SCORE_COLUMNS)])
         
     return scores
 

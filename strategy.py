@@ -3,34 +3,27 @@ Players can have different strategies when it comes to playing hot dice.
 
 Essentially, they can have either roll strategies, or score selection strategies
 
-All scores must have ratings by the time they are passed in
+All scores must have ratings by the time they are returned
 The player object generally just selects the roll with the best rating.
 """
 
-from hotdice import NUMBER_OF_DICE, NUMBER_OF_FACES, MIN_REPEAT_MULTIPLES 
-# 
-# def roll_(s, n_dice, other_player_scores, my_current_score, winning_score, last_roll_boolean, am_I_on_the_board, ):
-#     """
-#     A class method
-# 
-#     Rolls again if 
-#     """
-#     pass
+import pandas as pd
+from hotdice import NUMBER_OF_DICE, NUMBER_OF_FACES, MIN_REPEAT_MULTIPLES
 
 def roll_stop_at(s, game, target_score):
     """
     Roll again unless target score is reached / passed
     """
-    if s.round_score >= target_score:
+    if s.turn_score < target_score:
         return False
     else:
         return True
 
-def roll_stop_at_unless_hotdice(s, game, target_score):
+def roll_stop_at_unless_hotdice(s, game, target_score: int = None, hotdice: bool = None):
     """
     Roll again unless target score is reached / passed or if you have hotdice
     """
-    if roll_stop_at(s, game, target_score) or target_score == NUMBER_OF_DICE:
+    if roll_stop_at(s, game, target_score) or hotdice:
         return True
     else:
         return False
@@ -56,7 +49,7 @@ def score_best_per_dice(s, scores, game, marginal_value_of_die=67):
     Higher scores get better ratings, but are made a bit smaller if a score requires many dice
 
     the marginal_value_of_die lets you say how big of an effect you want to see. 
-    Bigger number == more discount
+    Bigger number for marginal_value_of_die == more discount
     
     The default was computed by guessing the expected value (ev) of a single die is roughly 66.66
         However, this could be made smarter by computing the ev given (|) the # of die remaining
@@ -67,12 +60,15 @@ def score_best_per_dice(s, scores, game, marginal_value_of_die=67):
     
     # scores = scores.Score - (scores.Remaining.map(len) * marginal_value_of_die)
     
+    # create a roll "price" from the len remaining die, add that price to the Score and rank it.
     scores['Rating'] = ((scores.Remaining.map(len) * marginal_value_of_die) + scores.Score).rank()
     
     # norm to make 0 the max
     scores['Rating']= scores.Rating - scores.Rating.max()
     
     scores['Len'] = scores.apply(lambda x: len(x.Roll), axis=1)
+    
+    # prioritize rating over length, but if the ratings are the same, choose the shortest length
     scores = scores.sort_values('Len', ascending=False).sort_values('Rating', ascending=False).drop(columns=['Len'])
     
     return scores
@@ -85,7 +81,8 @@ def score_best_per_dice_exclude_hot_dice(s, scores, game, discount_factor=1):
     scores_weighted = score_best_per_dice(s, 
                                           scores.loc[scores.Roll.map(lambda x: len(x) < NUMBER_OF_DICE)], 
                                           game)
-    scores_weighted = scores_weighted.append(scores.loc[~scores.index.isin(scores_weighted.index)]).sort_values(['Rating', 'Score'], ascending=False)
+    scores_weighted = pd.concat([scores_weighted, scores.loc[~scores.index.isin(scores_weighted.index)]
+                                ]).sort_values(['Rating', 'Score'], ascending=False)
     return scores
 
 def score_avoid_fives(s, scores, game, five_cost = 1):
